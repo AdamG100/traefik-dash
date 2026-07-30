@@ -24,18 +24,16 @@ app.use(
 );
 
 app.use(
-  '/api',
   createProxyMiddleware({
+    // No Express path prefix here: app.use('/api', ...) strips '/api' from
+    // req.url before the proxy sees it, so the forwarded request would lose
+    // the prefix (Traefik requires /api/... to route to its internal API).
+    // pathFilter selects which requests to proxy without touching the URL.
+    pathFilter: '/api',
     target: traefikTarget,
     changeOrigin: true,
     logger: console,
     on: {
-      proxyReq: (proxyReq, req) => {
-        console.log(`[proxy] ${req.method} ${req.originalUrl} -> ${traefikTarget}${proxyReq.path}`);
-      },
-      proxyRes: (proxyRes, req) => {
-        console.log(`[proxy] ${req.originalUrl} <- ${proxyRes.statusCode}`);
-      },
       error: (err, req) => {
         console.error(`[proxy] ${req.originalUrl} error: ${err.message}`);
       },
