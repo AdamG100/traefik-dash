@@ -4,9 +4,9 @@ services:
     image: ghcr.io/your-org/traefik-dashboard:latest
     labels:
       traefik.enable: true
-      traefik.http.routers.smokeping.entryPoints: https
-      traefik.http.routers.dashboard.rule: Host(`dashboard.example.com`)
-      traefik.http.routers.smokeping.middlewares: auth@file,noIndex@file
+      traefik.http.routers.yourname.entryPoints: https
+      traefik.http.routers.yourname.rule: Host(`dashboard.example.com`)
+      traefik.http.routers.yourname.middlewares: auth@file
     env_file:
       - ../.env
     networks:
