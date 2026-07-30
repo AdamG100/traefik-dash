@@ -10,7 +10,18 @@ const traefikTarget = process.env.TRAEFIK_API_URL || 'http://traefik:8080';
 
 const app = express();
 
-app.use(helmet());
+// Cards load app icons from the dashboard-icons CDN, so img-src needs that
+// host beyond helmet's default 'self'-only policy.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'img-src': ["'self'", 'https://cdn.jsdelivr.net'],
+      },
+    },
+  }),
+);
 
 app.use(
   createProxyMiddleware({
@@ -67,6 +78,41 @@ app.get('/favicon-proxy', async (req, res) => {
   } catch {
     res.status(404).end();
   }
+});
+
+// Checks whether each domain actually responds, server-side, for the same
+// reason as /favicon-proxy above: a client-side check would hit protected
+// origins directly and could trigger browser auth prompts. Reachability
+// only (any response counts as up, including 401/403/redirects) — this
+// isn't a content check, just "is something there".
+const MAX_STATUS_CHECK_DOMAINS = 200;
+
+app.use(express.json());
+
+app.post('/status-check', async (req, res) => {
+  const domains = req.body?.domains;
+  if (!Array.isArray(domains) || domains.length === 0 || domains.length > MAX_STATUS_CHECK_DOMAINS) {
+    return res.status(400).json({});
+  }
+
+  const results = await Promise.all(
+    domains
+      .filter((domain) => typeof domain === 'string' && HOSTNAME_RE.test(domain))
+      .map(async (domain) => {
+        try {
+          await fetch(`https://${domain}/`, {
+            method: 'HEAD',
+            redirect: 'follow',
+            signal: AbortSignal.timeout(4000),
+          });
+          return [domain, true];
+        } catch {
+          return [domain, false];
+        }
+      }),
+  );
+
+  res.json(Object.fromEntries(results));
 });
 
 app.use(express.static(distDir));

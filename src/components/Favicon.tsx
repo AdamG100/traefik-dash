@@ -14,45 +14,83 @@ function colorFromDomain(domain: string): Color {
   return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length];
 }
 
-// The real favicon is fetched via our own server (/favicon-proxy) rather
-// than requested directly by the browser: some proxied services sit behind
-// HTTP Basic Auth, and a client-side request to those triggers the browser's
-// native login prompt (a WWW-Authenticate challenge does this for <img>
-// requests same as any other, regardless of credentials mode). Google's
-// s2/favicons service was tried as a further fallback, but it can't reach
-// these internal-only domains and returns broken/generic results.
-const faviconUrl = (domain: string) => `/favicon-proxy?domain=${encodeURIComponent(domain)}`;
+// Curated icon set (same one Homarr/Homepage/Dashy use) keyed by app slug,
+// served from a public, unauthenticated CDN — tried before the real site
+// favicon. Many self-hosted admin tools sit behind Authentik's forwardAuth,
+// which intercepts *any* unauthenticated request to the domain, including
+// ours (server-side or client-side) — so favicon.ico just redirects to the
+// login page instead of returning the icon, no matter who asks for it.
+const DASHBOARD_ICONS_CDN = 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg';
 
-// Probes the URL with an off-DOM Image() so the visible element is always
-// Ninna's Avatar (consistent ring/shape/sizing throughout), rather than
-// swapping between a raw <img> and Avatar depending on load state.
-function useResolvedFavicon(domain: string) {
+// Maps docker/compose service naming to this icon set's slugs where they
+// don't already match directly (checked against the CDN by hand).
+const ICON_ALIASES: Record<string, string> = {
+  pihole: 'pi-hole',
+  wgeasy: 'wireguard',
+  codeserver: 'vscode',
+  visualstudiocode: 'vscode',
+};
+
+function iconSlugCandidates(service: string): string[] {
+  const base = service.split('@')[0].toLowerCase();
+  const slugs = new Set<string>();
+  const add = (s: string) => slugs.add(ICON_ALIASES[s] ?? s);
+
+  add(base);
+  base.split('-').filter(Boolean).forEach(add);
+
+  return [...slugs];
+}
+
+// The real favicon (last resort before the generated initial) is fetched
+// via our own server (/favicon-proxy) rather than requested directly by the
+// browser, since a direct client-side request to an auth-protected domain
+// would trigger the browser's native login prompt on a 401 challenge.
+function candidateUrls(domain: string, service: string): string[] {
+  return [
+    ...iconSlugCandidates(service).map((slug) => `${DASHBOARD_ICONS_CDN}/${slug}.svg`),
+    `/favicon-proxy?domain=${encodeURIComponent(domain)}`,
+  ];
+}
+
+// Probes each candidate URL with an off-DOM Image() so the visible element
+// is always Ninna's Avatar (consistent ring/shape/sizing throughout), rather
+// than swapping between a raw <img> and Avatar depending on fallback step.
+function useResolvedFavicon(domain: string, service: string) {
   const [src, setSrc] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setSrc(null);
 
-    const url = faviconUrl(domain);
-    const img = new Image();
-    img.onload = () => {
-      if (!cancelled) setSrc(url);
-    };
-    img.onerror = () => {
+    async function resolve() {
+      for (const url of candidateUrls(domain, service)) {
+        const loaded = await new Promise<boolean>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
+          img.src = url;
+        });
+        if (cancelled) return;
+        if (loaded) {
+          setSrc(url);
+          return;
+        }
+      }
       if (!cancelled) setSrc('');
-    };
-    img.src = url;
+    }
 
+    resolve();
     return () => {
       cancelled = true;
     };
-  }, [domain]);
+  }, [domain, service]);
 
   return src;
 }
 
-export function Favicon({ domain }: { domain: string }) {
-  const src = useResolvedFavicon(domain);
+export function Favicon({ domain, service }: { domain: string; service: string }) {
+  const src = useResolvedFavicon(domain, service);
 
   return (
     <Avatar

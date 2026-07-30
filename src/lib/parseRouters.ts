@@ -7,7 +7,6 @@ interface TraefikRouter {
   rule?: string;
   service?: string;
   provider?: string;
-  status?: string;
   name?: string;
 }
 
@@ -32,6 +31,10 @@ const MOCK_DOMAINS: DomainCard[] = [
   { domain: 'github.com', service: 'vaultwarden@docker' },
   { domain: 'pi-hole.net', service: 'pihole@docker' },
 ];
+
+// Domains that should read as unreachable in the mock preview, so the
+// offline dot state is visible without a live connection to check against.
+const MOCK_OFFLINE_DOMAINS = new Set(['pi-hole.net']);
 
 export async function fetchDomains(): Promise<DomainCard[]> {
   if (import.meta.env.DEV && import.meta.env.VITE_MOCK_DATA === 'true') {
@@ -60,4 +63,28 @@ export async function fetchDomains(): Promise<DomainCard[]> {
   return Array.from(seen, ([domain, service]) => ({ domain, service })).sort(
     (a, b) => a.domain.localeCompare(b.domain),
   );
+}
+
+// Checks whether each domain is actually reachable, via the server (so the
+// browser never talks to the target domains directly — the same reasoning
+// as the favicon proxy: some sit behind auth that would otherwise trigger a
+// native browser login prompt on a client-side request).
+export async function checkReachability(domains: string[]): Promise<Record<string, boolean>> {
+  if (import.meta.env.DEV && import.meta.env.VITE_MOCK_DATA === 'true') {
+    return Object.fromEntries(domains.map((d) => [d, !MOCK_OFFLINE_DOMAINS.has(d)]));
+  }
+
+  if (domains.length === 0) return {};
+
+  try {
+    const res = await fetch('/status-check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domains }),
+    });
+    if (!res.ok) return {};
+    return await res.json();
+  } catch {
+    return {};
+  }
 }
