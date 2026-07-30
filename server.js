@@ -28,6 +28,18 @@ app.use(
   createProxyMiddleware({
     target: traefikTarget,
     changeOrigin: true,
+    logger: console,
+    on: {
+      proxyReq: (proxyReq, req) => {
+        console.log(`[proxy] ${req.method} ${req.originalUrl} -> ${traefikTarget}${proxyReq.path}`);
+      },
+      proxyRes: (proxyRes, req) => {
+        console.log(`[proxy] ${req.originalUrl} <- ${proxyRes.statusCode}`);
+      },
+      error: (err, req) => {
+        console.error(`[proxy] ${req.originalUrl} error: ${err.message}`);
+      },
+    },
   }),
 );
 
