@@ -8,7 +8,7 @@ Built with Vite, React, TypeScript, Tailwind CSS, and [Ninna UI](https://www.nin
 
 - Auto-discovers every domain from Traefik's `/api/http/routers`, polling every 20 seconds
 - Excludes Traefik's own internal routers and the dashboard's own router
-- Favicon fallback chain: site favicon, then Google's favicon service, then a generated initial
+- Favicon fallback chain: site favicon (fetched server-side via `/favicon-proxy` so protected services don't trigger a browser login prompt), then a generated initial
 - Search/filter bar
 - Light, dark, and system theme modes, plus a switchable Ninna UI color preset (Default, Ocean, Forest, Sunset, Minimal)
 - No auth, no database, no persistence — state is whatever Traefik's API returns right now

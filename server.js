@@ -10,18 +10,7 @@ const traefikTarget = process.env.TRAEFIK_API_URL || 'http://traefik:8080';
 
 const app = express();
 
-// Cards link out to favicons on arbitrary external domains, so img-src
-// needs to allow https: beyond helmet's default 'self'-only policy.
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-        'img-src': ["'self'", 'https:'],
-      },
-    },
-  }),
-);
+app.use(helmet());
 
 app.use(
   createProxyMiddleware({

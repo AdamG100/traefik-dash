@@ -18,15 +18,14 @@ function colorFromDomain(domain: string): Color {
 // than requested directly by the browser: some proxied services sit behind
 // HTTP Basic Auth, and a client-side request to those triggers the browser's
 // native login prompt (a WWW-Authenticate challenge does this for <img>
-// requests same as any other, regardless of credentials mode).
-const candidateUrls = (domain: string) => [
-  `/favicon-proxy?domain=${encodeURIComponent(domain)}`,
-  `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
-];
+// requests same as any other, regardless of credentials mode). Google's
+// s2/favicons service was tried as a further fallback, but it can't reach
+// these internal-only domains and returns broken/generic results.
+const faviconUrl = (domain: string) => `/favicon-proxy?domain=${encodeURIComponent(domain)}`;
 
-// Probes each candidate URL with an off-DOM Image() so the visible element
-// is always Ninna's Avatar (consistent ring/shape/sizing throughout), rather
-// than swapping between a raw <img> and Avatar depending on fallback step.
+// Probes the URL with an off-DOM Image() so the visible element is always
+// Ninna's Avatar (consistent ring/shape/sizing throughout), rather than
+// swapping between a raw <img> and Avatar depending on load state.
 function useResolvedFavicon(domain: string) {
   const [src, setSrc] = useState<string | null>(null);
 
@@ -34,24 +33,16 @@ function useResolvedFavicon(domain: string) {
     let cancelled = false;
     setSrc(null);
 
-    async function resolve() {
-      for (const url of candidateUrls(domain)) {
-        const loaded = await new Promise<boolean>((resolve) => {
-          const img = new Image();
-          img.onload = () => resolve(true);
-          img.onerror = () => resolve(false);
-          img.src = url;
-        });
-        if (cancelled) return;
-        if (loaded) {
-          setSrc(url);
-          return;
-        }
-      }
+    const url = faviconUrl(domain);
+    const img = new Image();
+    img.onload = () => {
+      if (!cancelled) setSrc(url);
+    };
+    img.onerror = () => {
       if (!cancelled) setSrc('');
-    }
+    };
+    img.src = url;
 
-    resolve();
     return () => {
       cancelled = true;
     };
