@@ -14,8 +14,13 @@ function colorFromDomain(domain: string): Color {
   return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length];
 }
 
+// The real favicon is fetched via our own server (/favicon-proxy) rather
+// than requested directly by the browser: some proxied services sit behind
+// HTTP Basic Auth, and a client-side request to those triggers the browser's
+// native login prompt (a WWW-Authenticate challenge does this for <img>
+// requests same as any other, regardless of credentials mode).
 const candidateUrls = (domain: string) => [
-  `https://${domain}/favicon.ico`,
+  `/favicon-proxy?domain=${encodeURIComponent(domain)}`,
   `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
 ];
 

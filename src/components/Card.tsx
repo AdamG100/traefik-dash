@@ -26,7 +26,7 @@ export function Card({ domain, service }: DomainCard) {
 
         <Favicon domain={domain} />
 
-        <NinnaCard.Body className="min-w-0 p-0">
+        <NinnaCard.Body className="w-full min-w-0 p-0">
           <NinnaCard.Title className="truncate font-data text-sm font-medium">
             <LinkOverlay href={`https://${domain}`} external>
               {domain}
