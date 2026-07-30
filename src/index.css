@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* All 5 presets are imported so the dropdown can switch data-theme at
+   runtime — each preset scopes its CSS variables under its own
+   [data-theme="…"] selector, so importing them together doesn't conflict. */
+@import "@ninna-ui/core/theme/presets/default.css";
+@import "@ninna-ui/core/theme/presets/ocean.css";
+@import "@ninna-ui/core/theme/presets/forest.css";
+@import "@ninna-ui/core/theme/presets/sunset.css";
+@import "@ninna-ui/core/theme/presets/minimal.css";
+
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+@theme {
+  --font-sans: "Poppins", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+}

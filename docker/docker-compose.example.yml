@@ -1,0 +1,18 @@
+services:
+  app:
+    container_name: traefik-dashboard
+    image: ghcr.io/your-org/traefik-dashboard:latest
+    labels:
+      traefik.enable: true
+      traefik.http.routers.smokeping.entryPoints: https
+      traefik.http.routers.dashboard.rule: Host(`dashboard.example.com`)
+      traefik.http.routers.smokeping.middlewares: auth@file,noIndex@file
+    env_file:
+      - ../.env
+    networks:
+      - traefik-net
+    restart: always
+
+networks:
+  traefik-net:
+    external: true
