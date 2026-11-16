@@ -5,6 +5,10 @@ on:
     branches:
       - main
       - master
+  # Every two days, rebuilt on the newest Node.js 26 if one has come out since
+  # the last build. Skipped when the node:26-alpine image is unchanged.
+  schedule:
+    - cron: "0 5 */2 * *"
   workflow_dispatch:
 
 env:
@@ -12,7 +16,28 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  base-image:
+    name: Look for a new Node.js 26
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+      build: ${{ github.event_name != 'schedule' || steps.seen.outputs.cache-hit != 'true' }}
+    steps:
+      - name: Read the node:26-alpine digest
+        id: digest
+        run: echo "digest=$(docker buildx imagetools inspect node:26-alpine --format '{{json .Manifest}}' | jq -r .digest)" >> "$GITHUB_OUTPUT"
+      - name: Was the last build on it?
+        id: seen
+        uses: actions/cache/restore@v6
+        with:
+          path: .node-base
+          key: node-base-${{ steps.digest.outputs.digest }}
+          lookup-only: true
+
   build-and-push:
+    needs: base-image
+    if: needs.base-image.outputs.build == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -52,3 +77,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
+
+      # So the next scheduled run knows this Node.js has been built on.
+      - name: Remember the Node.js image
+        run: mkdir -p .node-base && echo "${{ needs.base-image.outputs.digest }}" > .node-base/digest
+      - name: Save it
+        uses: actions/cache/save@v6
+        continue-on-error: true
+        with:
+          path: .node-base
+          key: node-base-${{ needs.base-image.outputs.digest }}
