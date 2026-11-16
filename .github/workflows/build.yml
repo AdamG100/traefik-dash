@@ -1,0 +1,27 @@
+name: Build
+
+# Builds every pull request on the latest Node.js 26. Dependency updates are
+# merged only once this passes (dependency-updates.yml).
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          check-latest: true
+          cache: npm
+      - run: npm ci
+      - run: npm run build

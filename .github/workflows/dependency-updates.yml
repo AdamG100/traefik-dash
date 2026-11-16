@@ -1,0 +1,27 @@
+name: Dependency updates
+
+# Merges Dependabot's package updates once they are ready. The rules (how many
+# updates to wait for, for how long, and security fixes straight away) are the
+# same for every repository and kept in one place:
+# https://github.com/AdamG100/.github/blob/main/.github/workflows/dependency-updates.yml
+
+on:
+  workflow_run:
+    workflows: [Build]
+    types: [completed]
+  # Looks again at updates that are waiting.
+  schedule:
+    - cron: "30 5 */2 * *"
+  workflow_dispatch:
+
+jobs:
+  merge:
+    uses: AdamG100/.github/.github/workflows/dependency-updates.yml@main
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    with:
+      check-workflows: build.yml
+      deploy-workflow: "docker-build-push.yml"
+      deploy-args: ""
