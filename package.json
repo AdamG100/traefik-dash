@@ -18,7 +18,7 @@
     "@ninna-ui/layout": "^0.6.0",
     "@ninna-ui/navigation": "^0.6.0",
     "@ninna-ui/overlays": "^0.6.0",
-    "@ninna-ui/primitives": "^0.6.0",
+    "@ninna-ui/primitives": "^0.7.0",
     "express": "^5.3.0",
     "helmet": "^8.3.0",
     "http-proxy-middleware": "^4.2.1",
